@@ -17,7 +17,15 @@ const SuspendUser = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const backendUrl = "http://localhost:5000"; // Your Express backend URL
+
+  // IMPORTANT: Use environment variable for backend URL.
+  // When deployed on Vercel, REACT_APP_BACKEND_URL will be provided by Vercel.
+  // For local development, it will fall back to your deployed backend URL.
+  // Ensure the environment variable in Vercel for the frontend project DOES NOT have a trailing slash.
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://admin-management-server.vercel.app"; 
+  // If your local backend runs on port 5000 and you want to test locally with it, change the fallback:
+  // const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
 
   const fetchData = async () => {
     try {
@@ -32,13 +40,14 @@ const SuspendUser = () => {
           return;
       }
 
+      // Construct URL without a trailing slash on backendUrl to avoid double slashes
       const url = `${backendUrl}/api/suspendedUsers?page=${pageFromUrl}&limit=${itemsPerPage}`;
       console.log("Fetching suspended users from URL:", url);
 
       const response = await fetch(url);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error or non-JSON response from server.' }));
         throw new Error(
           errorData.message || "Failed to fetch suspended users."
         );
@@ -50,7 +59,7 @@ const SuspendUser = () => {
       setTotalItems(result.totalItems);
     } catch (err) {
       console.error("Error fetching suspended users:", err);
-      setError(err.message || "Could not load suspended users.");
+      setError(err.message || "Could not load suspended users. Check network and backend CORS configuration.");
     } finally {
       setLoading(false);
     }
@@ -89,7 +98,7 @@ const SuspendUser = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error or non-JSON response from server.' }));
         throw new Error(errorData.message || 'Failed to delete user report.');
       }
 
@@ -100,7 +109,7 @@ const SuspendUser = () => {
 
     } catch (err) {
       console.error("Deletion error:", err);
-      setDeleteError(err.message || 'Could not delete user report.');
+      setDeleteError(err.message || 'Could not delete user report. Check network and backend CORS configuration.');
     } finally {
       setLoading(false);
       setShowConfirmModal(false);
@@ -203,7 +212,6 @@ const SuspendUser = () => {
                             : "N/A"}
                         </span>
                       </p>
-                      {/* --- NEW: Display Reported By --- */}
                       {user.reporterName && (
                         <p className="flex items-center mt-3">
                           <span className="font-semibold w-24 flex-shrink-0">Reported By:</span>
@@ -212,7 +220,6 @@ const SuspendUser = () => {
                           </span>
                         </p>
                       )}
-                      {/* --- END NEW --- */}
                     </div>
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <p className="font-semibold text-gray-800 mb-2">Reason:</p>

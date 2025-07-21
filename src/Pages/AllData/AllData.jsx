@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const AllData = () => {
@@ -17,7 +17,15 @@ const AllData = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const backendUrl = "http://localhost:5000"; // Your Express backend URL
+
+  // IMPORTANT: Use environment variable for backend URL.
+  // When deployed on Vercel, REACT_APP_BACKEND_URL will be provided by Vercel.
+  // For local development, it will fall back to the deployed backend URL or your local backend URL.
+  // Ensure the environment variable in Vercel for the frontend project DOES NOT have a trailing slash.
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://admin-management-server.vercel.app"; 
+  // If your local backend runs on port 5000 and you want to test locally with it, change the fallback:
+  // const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
 
   const fetchData = async () => {
     try {
@@ -33,6 +41,7 @@ const AllData = () => {
           return;
       }
 
+      // Construct URL without a trailing slash on backendUrl to avoid double slashes
       let url = `${backendUrl}/api/userReports?page=${pageFromUrl}&limit=${itemsPerPage}`;
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -42,9 +51,10 @@ const AllData = () => {
       const response = await fetch(url);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        // Attempt to parse error response from backend for more details
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error or non-JSON response from server.' }));
         throw new Error(
-          errorData.message || "Failed to fetch all user data."
+          errorData.message || `Failed to fetch all user data. Status: ${response.status}`
         );
       }
 
@@ -54,7 +64,8 @@ const AllData = () => {
       setTotalItems(result.totalItems);
     } catch (err) {
       console.error("Error fetching all user data:", err);
-      setError(err.message || "Could not load all user data.");
+      // More specific error message for network/CORS issues
+      setError(err.message || "Could not load all user data. Check network and backend CORS configuration.");
     } finally {
       setLoading(false);
     }
@@ -100,8 +111,8 @@ const AllData = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete user report.');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error or non-JSON response from server.' }));
+        throw new Error(errorData.message || `Failed to delete user report. Status: ${response.status}`);
       }
 
       const result = await response.json();
@@ -111,7 +122,7 @@ const AllData = () => {
 
     } catch (err) {
       console.error("Deletion error:", err);
-      setDeleteError(err.message || 'Could not delete user report.');
+      setDeleteError(err.message || 'Could not delete user report. Check network and backend CORS configuration.');
     } finally {
       setLoading(false);
       setShowConfirmModal(false);
@@ -149,7 +160,7 @@ const AllData = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-4xl font-extrabold text-center text-blue-800 mb-8">
-        {currentSearchTerm ? `Search Results for "${currentSearchTerm}"` : "All Reports"} ({totalItems} total)
+        {currentSearchTerm ? `Search Results for "${currentSearchTerm}"` : "All User Reports"} ({totalItems} total)
       </h1>
 
       {deleteError && (
@@ -225,7 +236,6 @@ const AllData = () => {
                             : "N/A"}
                         </span>
                       </p>
-                      {/* --- NEW: Display Reported By --- */}
                       {user.reporterName && (
                         <p className="flex items-center mt-3">
                           <span className="font-semibold w-24 flex-shrink-0">Reported By:</span>
@@ -234,7 +244,6 @@ const AllData = () => {
                           </span>
                         </p>
                       )}
-                      {/* --- END NEW --- */}
                     </div>
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <p className="font-semibold text-gray-800 mb-2">Reason:</p>

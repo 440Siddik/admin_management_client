@@ -10,6 +10,15 @@ const Home = () => {
   // Get currentUser, userProfile, and authLoading from AuthContext
   const { currentUser, userProfile, loading: authLoading } = useAuth(); 
 
+  // IMPORTANT: Use environment variable for backend URL.
+  // When deployed on Vercel, REACT_APP_BACKEND_URL will be provided by Vercel.
+  // For local development, it will fall back to your deployed backend URL.
+  // Ensure the environment variable in Vercel for the frontend project DOES NOT have a trailing slash.
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://admin-management-server.vercel.app"; 
+  // If your local backend runs on port 5000 and you want to test locally with it, change the fallback:
+  // const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -17,8 +26,6 @@ const Home = () => {
     setSuccessMessage("");
 
     // Frontend validation: Ensure user is logged in and profile is loaded
-    // This check should ideally prevent the button from being clickable,
-    // but adding it here as a final safeguard before constructing userData.
     if (!currentUser || !userProfile || !userProfile.fbName) {
       setError("You must be logged in and your profile loaded to submit a report.");
       setLoading(false);
@@ -43,12 +50,6 @@ const Home = () => {
     console.log("User Data to be submitted to Express backend:", userData);
 
     try {
-      // ----------------------------------------------------
-      // IMPORTANT: Set your backend URL here.
-      // For local development, it's usually http://localhost:5000
-      const backendUrl = "http://localhost:5000"; // <--- ENSURE THIS IS YOUR CORRECT BACKEND URL
-      // ----------------------------------------------------
-
       const response = await fetch(`${backendUrl}/api/userReports`, {
         method: "POST",
         headers: {
@@ -58,7 +59,7 @@ const Home = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error or non-JSON response from server.' }));
         throw new Error(errorData.message || "Failed to submit report.");
       }
 
@@ -210,7 +211,7 @@ const Home = () => {
           <div className="w-full mt-8"> {/* Use w-full directly on the div */}
             <button
               type="submit"
-              className="inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-900 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-600 w-full"
+              className="inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-900 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-600"
               // Disable if loading, auth is loading, or user/profile data is not fully available
               disabled={loading || authLoading || !currentUser || !userProfile || !userProfile.fbName} 
             >
