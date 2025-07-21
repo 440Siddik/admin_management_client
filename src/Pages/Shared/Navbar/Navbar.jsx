@@ -47,7 +47,6 @@ const Navbar = () => {
         {/* Logo/Brand */}
         <Link to="/" className="text-2xl md:text-3xl font-bold flex items-center space-x-2">
           {/* Ensure the logo path is correct relative to your project's public folder or build output */}
-          <img src="./src/assets/logo.jpeg" alt="Logo" className="w-8 h-8 md:w-10 md:h-10 rounded-full" />
           {/* REMOVED 'hidden sm:inline' to make it visible on all screen sizes */}
           <span className="">Admin Management</span> 
         </Link>

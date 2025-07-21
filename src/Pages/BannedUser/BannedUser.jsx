@@ -142,7 +142,7 @@ const BannedUser = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-4xl font-extrabold text-center text-red-700 mb-8">
+      <h1 className="text-3xl font-extrabold text-center text-red-700 mb-8">
         Banned Members ({totalItems} total)
       </h1>
 

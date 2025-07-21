@@ -159,8 +159,8 @@ const AllData = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-4xl font-extrabold text-center text-blue-800 mb-8">
-        {currentSearchTerm ? `Search Results for "${currentSearchTerm}"` : "All User Reports"} ({totalItems} total)
+      <h1 className="text-3xl font-extrabold text-center text-blue-800 mb-8">
+        {currentSearchTerm ? `Search Results for "${currentSearchTerm}"` : "All Reports"} ({totalItems} total)
       </h1>
 
       {deleteError && (

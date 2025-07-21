@@ -143,7 +143,7 @@ const SuspendUser = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-4xl font-extrabold text-center text-yellow-600 mb-8">
+      <h1 className="text-3xl font-extrabold text-center text-yellow-600 mb-8">
         Suspended Members ({totalItems} total)
       </h1>
 
