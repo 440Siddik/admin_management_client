@@ -99,7 +99,7 @@ const Home = () => {
   return (
     <div className="container mx-auto p-4 md:p-8 min-h-[calc(100vh-80px)] flex items-center justify-center">
       <div className="w-full max-w-2xl">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-center text-blue-700 mb-8 md:mb-12 drop-shadow-lg">
+        <h1 className="text-4xl md:text-3xl font-extrabold text-center text-blue-700 mb-6 md:mb-7 drop-shadow-lg">
           Submit A Report
         </h1>
 
@@ -211,7 +211,7 @@ const Home = () => {
           <div className="w-full mt-8"> {/* Use w-full directly on the div */}
             <button
               type="submit"
-              className="inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-900 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-600"
+              className="inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-900 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-600 w-full"
               // Disable if loading, auth is loading, or user/profile data is not fully available
               disabled={loading || authLoading || !currentUser || !userProfile || !userProfile.fbName} 
             >
