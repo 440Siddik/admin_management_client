@@ -10,7 +10,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // New state for password visibility
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility: false = hidden, true = visible
 
   const { auth, saveUserProfile } = useAuth();
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ const Register = () => {
         throw new Error("Password should be at least 6 characters.");
       }
 
+      // 1. Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -36,21 +37,23 @@ const Register = () => {
       const user = userCredential.user;
       console.log("Firebase user registered:", user);
 
+      // 2. Save user profile to your MongoDB backend with initial 'pending' status
       await saveUserProfile(user.uid, { fbName: fbName, email: email });
 
-      console.log("User profile saved to Firestore.");
-      setShowSuccessModal(true);
+      console.log("User profile saved to MongoDB with pending status.");
+      setShowSuccessModal(true); // Show success modal
     } catch (err) {
       console.error("Registration error:", err.message);
       let errorMessage = "Failed to register. Please try again.";
       if (err.code === "auth/email-already-in-use") {
-        errorMessage =
-          "This email is already registered. Please login or use a different email.";
+        errorMessage = "This email is already registered. Please login or use a different email.";
       } else if (err.code === "auth/invalid-email") {
         errorMessage = "Invalid email address format.";
       } else if (err.code === "auth/weak-password") {
-        errorMessage =
-          "Password is too weak. Please choose a stronger password.";
+        errorMessage = "Password is too weak. Please choose a stronger password.";
+      } else if (err.message.includes("Failed to save user profile to backend")) {
+        // Specific error for backend save failure
+        errorMessage = "Account created, but failed to save profile for approval. Please contact support.";
       }
       setError(errorMessage);
     } finally {
@@ -60,7 +63,7 @@ const Register = () => {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    navigate("/login");
+    navigate("/login"); // Direct to login after successful registration (pending approval)
   };
 
   const togglePasswordVisibility = () => {
@@ -125,10 +128,8 @@ const Register = () => {
             />
           </div>
 
-          {/* Password Input with Toggle - FIXED STRUCTURE */}
+          {/* Password Input with Toggle - Corrected Icon Logic */}
           <div>
-            {" "}
-            {/* This div now contains only the label and the relative wrapper */}
             <label
               htmlFor="password"
               className="block text-lg font-semibold text-gray-700 mb-2"
@@ -136,10 +137,8 @@ const Register = () => {
               Password
             </label>
             <div className="relative">
-              {" "}
-              {/* This div is now the relative container for input and button */}
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? "text" : "password"} // Correctly switches input type
                 id="password"
                 name="password"
                 placeholder="Enter a strong password"
@@ -151,25 +150,16 @@ const Register = () => {
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Removed mt-8 here
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                // aria-label describes the *action* the button will perform
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
+                {/* ICON LOGIC:
+                    If showPassword is TRUE (password is visible), show the OPEN eye icon.
+                    If showPassword is FALSE (password is hidden), show the SLASHED eye icon.
+                */}
                 {showPassword ? (
-                  <svg
-                    className="h-5 w-5 text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88L6.5 6.5m14.5 10a10.05 10.05 0 01-2.029 1.563m-5.858-.908a3 3 0 10-4.243-4.243M12 19c4.478 0 8.268-2.943 9.543-7a9.97 9.97 0 00-1.563-3.029m-5.858-.908l-4.242-4.242"
-                    ></path>
-                  </svg>
-                ) : (
+                  // Password is VISIBLE, so show the OPEN eye icon (click to hide)
                   <svg
                     className="h-5 w-5 text-gray-500"
                     fill="none"
@@ -188,6 +178,22 @@ const Register = () => {
                       strokeLinejoin="round"
                       strokeWidth="2"
                       d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    ></path>
+                  </svg>
+                ) : (
+                  // Password is HIDDEN, so show the SLASHED eye icon (click to show)
+                  <svg
+                    className="h-5 w-5 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88L6.5 6.5m14.5 10a10.05 10.05 0 01-2.029 1.563m-5.858-.908a3 3 0 10-4.243-4.243M12 19c4.478 0 8.268-2.943 9.543-7a9.97 9.97 0 00-1.563-3.029m-5.858-.908l-4.242-4.242"
                     ></path>
                   </svg>
                 )}
@@ -260,7 +266,7 @@ const Register = () => {
         </p>
       </div>
 
-      {/* Success Modal */}
+      {/* Success Modal - MODIFIED MESSAGE */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center transform transition-all duration-300 scale-100 opacity-100">
@@ -284,11 +290,11 @@ const Register = () => {
               Registration Successful!
             </h3>
             <p className="text-gray-600 mb-6">
-              Your account has been created. Please proceed to login.
+              Your account has been created and is awaiting admin approval. You will be able to log in once your account is approved.
             </p>
             <button
               onClick={handleModalClose}
-              className="inline-flex items-center justify-center px-6 py-2.5 text-base font-medium text-white bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg shadow-md hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
+              className="inline-flex items-center justify-center px-6 py-2.5 text-base font-medium text-white bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg shadow-md hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
             >
               Go to Login
             </button>

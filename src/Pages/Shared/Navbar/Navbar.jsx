@@ -7,8 +7,8 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false); // State for mobile menu toggle
   const navigate = useNavigate(); // Initialize useNavigate hook
 
-  // Get currentUser, logout function, and loading state from AuthContext
-  const { currentUser, logout, loading: authLoading } = useAuth(); 
+  // Get currentUser, logout function, userRole, and loading state from AuthContext
+  const { currentUser, logout, loading: authLoading, userRole } = useAuth();
 
   const handleSearch = (e) => {
     e.preventDefault(); // Prevent default form submission (page reload)
@@ -21,7 +21,7 @@ const Navbar = () => {
       navigate("/all-data");
     }
     // Close the mobile menu after search, if it's open
-    setIsMenuOpen(false); 
+    setIsMenuOpen(false);
     // Optionally, clear the search input after submission
     // setSearchQuery('');
   };
@@ -41,22 +41,30 @@ const Navbar = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  // Helper to check if the current user has admin privileges
+  const isAdmin = currentUser && (userRole === 'admin' || userRole === 'superadmin');
+
   return (
     <nav className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-lg sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        {/* Logo/Brand */}
+        {/* Logo/Brand - Now also serves as the Home link */}
         <Link to="/" className="text-2xl md:text-3xl font-bold flex items-center space-x-2">
-          {/* Ensure the logo path is correct relative to your project's public folder or build output */}
-          {/* REMOVED 'hidden sm:inline' to make it visible on all screen sizes */}
-          <span className="">Admin Management</span> 
+          <span>Admin Management</span>
         </Link>
 
         {/* Desktop Navigation Links and Search */}
         <div className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">Home</Link>
+          {/* Removed: <Link to="/" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">Home</Link> */}
           <Link to="/all-data" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">All Reports</Link>
           <Link to="/suspended-users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">Suspended</Link>
           <Link to="/banned-users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">Banned</Link>
+
+          {/* Admin Panel Link (Desktop) */}
+          {!authLoading && isAdmin && (
+            <Link to="/admin/users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium bg-blue-600 px-3 py-1 rounded-md shadow-sm">
+              Admin Panel
+            </Link>
+          )}
 
           {/* Search Form for Desktop */}
           <form onSubmit={handleSearch} className="flex items-center space-x-2">
@@ -76,7 +84,7 @@ const Navbar = () => {
           </form>
 
           {/* Conditional Login/Logout Button for Desktop */}
-          {!authLoading && ( // Only show if auth state is not loading
+          {!authLoading && (
             currentUser ? (
               <button
                 onClick={handleLogout}
@@ -110,11 +118,18 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-blue-800 pb-4">
           <div className="flex flex-col items-center space-y-4">
-            <Link to="/" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>Home</Link>
+            {/* Removed: <Link to="/" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>Home</Link> */}
             <Link to="/all-data" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>All Reports</Link>
             <Link to="/suspended-users" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>Suspended</Link>
             <Link to="/banned-users" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>Banned</Link>
-            
+
+            {/* Admin Panel Link (Mobile) */}
+            {!authLoading && isAdmin && (
+              <Link to="/admin/users" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200 bg-blue-600 rounded-lg shadow-sm" onClick={toggleMobileMenu}>
+                Admin Panel
+              </Link>
+            )}
+
             {/* Search Form for Mobile */}
             <form onSubmit={handleSearch} className="flex items-center space-x-2 w-full px-4">
               <input

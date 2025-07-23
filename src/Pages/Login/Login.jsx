@@ -8,10 +8,11 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // New state for success modal
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility: false = hidden, true = visible
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const { auth } = useAuth(); // Access auth object from AuthContext
+  // MODIFIED: Access auth, checkUserApproval, logout, AND refreshIdToken from useAuth
+  const { auth, checkUserApproval, logout, getIdToken } = useAuth(); // Renamed refreshIdToken to getIdToken as per AuthContext
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -20,10 +21,42 @@ const Login = () => {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      if (!email || !password) {
+        throw new Error("Email and password are required.");
+      }
 
-      console.log('Login successful with Firebase!');
-      setShowSuccessModal(true); // Show the success modal instead of direct navigate
+      // 1. Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log('Login successful with Firebase for UID:', user.uid);
+
+      // 2. Check user's approval status from your MongoDB backend
+      const approvalStatus = await checkUserApproval(user.uid);
+      console.log('User approval status from backend:', approvalStatus);
+
+      if (!approvalStatus.approved) {
+        // If not approved, sign out from Firebase to prevent partial login
+        await logout(); // Use the logout function from AuthContext
+        let message = "Your account is currently pending admin approval. Please wait for an administrator to approve it.";
+        if (approvalStatus.status === 'rejected') {
+            message = "Your account has been rejected. Please contact support for more information.";
+        } else if (approvalStatus.status === 'not_found') {
+            message = "Your user profile was not found. Please ensure you have registered or contact support.";
+        }
+        throw new Error(message); // Throw an error to display to the user
+      }
+
+      // MODIFIED: If approved, force a token refresh immediately after successful login and approval
+      // This ensures the custom claims (like role) are available for subsequent requests
+      await getIdToken(true); // Call getIdToken with forceRefresh = true
+      console.log("ID token refreshed after successful login and approval.");
+
+
+      // If approved, proceed to show success modal and navigate
+      console.log("User is approved. Navigating to dashboard.");
+      setShowSuccessModal(true); // Show the success modal
+      // The modal's handleModalClose will navigate to '/' or '/dashboard'
+      // For now, I'll keep it as '/' as per your current code.
 
     } catch (err) {
       console.error('Login error:', err.message);
@@ -34,6 +67,9 @@ const Login = () => {
         errorMessage = 'Invalid email address format.';
       } else if (err.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed login attempts. Please try again later.';
+      } else {
+        // Catch custom errors thrown from approval check
+        errorMessage = err.message;
       }
       setError(errorMessage);
     } finally {
@@ -47,7 +83,7 @@ const Login = () => {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    navigate('/'); // Redirect to home page after closing modal
+    navigate('/'); // Redirect to home page after closing modal (or '/dashboard' if preferred)
   };
 
   return (
@@ -80,12 +116,12 @@ const Login = () => {
             />
           </div>
 
-          {/* Password Input with Toggle */}
+          {/* Password Input with Toggle - Corrected Icon Logic */}
           <div>
             <label htmlFor="password" className="block text-lg font-semibold text-gray-700 mb-2">Password</label>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? 'text' : 'password'} // Correctly switches input type
                 id="password"
                 name="password"
                 placeholder="Enter your password"
@@ -100,14 +136,20 @@ const Login = () => {
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
+                {/* ICON LOGIC:
+                    If showPassword is TRUE (password is visible), show the OPEN eye icon.
+                    If showPassword is FALSE (password is hidden), show the SLASHED eye icon.
+                */}
                 {showPassword ? (
-                  <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88L6.5 6.5m14.5 10a10.05 10.05 0 01-2.029 1.563m-5.858-.908a3 3 0 10-4.243-4.243M12 19c4.478 0 8.268-2.943 9.543-7a9.97 9.97 0 00-1.563-3.029m-5.858-.908l-4.242-4.242"></path>
-                  </svg>
-                ) : (
+                  // Password is VISIBLE, so show the OPEN eye icon (click to hide)
                   <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                ) : (
+                  // Password is HIDDEN, so show the SLASHED eye icon (click to show)
+                  <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88L6.5 6.5m14.5 10a10.05 10.05 0 01-2.029 1.563m-5.858-.908a3 3 0 10-4.243-4.243M12 19c4.478 0 8.268-2.943 9.543-7a9.97 9.97 0 00-1.563-3.029m-5.858-.908l-4.242-4.242"></path>
                   </svg>
                 )}
               </button>

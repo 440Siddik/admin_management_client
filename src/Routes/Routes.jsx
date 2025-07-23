@@ -7,7 +7,10 @@ import AllData from "../Pages/AllData/AllData";
 import Login from "../Pages/Login/Login";
 import Register from "../Pages/Register/Register";
 import ForgotPassword from ".././ForgotPass/ForgotPass"; // NEW: Import ForgotPassword
-import PrivateRoute from "../components/utils/PrivateRoute/privateRoute"; // <--- IMPORTANT: Import PrivateRoute
+import PrivateRoute from "../components/utils/PrivateRoute/privateRoute"; // Corrected PrivateRoute import path
+
+// NEW: Import the main AdminUsers component
+import AdminUsers from "../Pages/Admin/AdminUsers"; // Path to your main AdminUsers component
 
 const router = createBrowserRouter([
   {
@@ -45,6 +48,15 @@ const router = createBrowserRouter([
       {
         path: "/forgot-password", // NEW: Add this route
         element: <ForgotPassword />, // ForgotPassword page is NOT protected
+      },
+      // NEW ROUTE: Admin Panel
+      {
+        path: "/admin/users", // The URL for your admin panel
+        element: (
+          <PrivateRoute requiredRole="admin"> {/* This route requires 'admin' or 'superadmin' role */}
+            <AdminUsers />
+          </PrivateRoute>
+        ),
       },
     ],
   },
