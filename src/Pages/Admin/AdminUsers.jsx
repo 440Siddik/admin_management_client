@@ -1,14 +1,15 @@
 // src/pages/admin/AdminUsers.jsx
 import React, { useState } from 'react';
-import { useAuth } from '../../Context/AuthContext';
+import { useNavigate } from 'react-router-dom'; // Ensure useNavigate is imported
+import { useAuth } from '../../Context/AuthContext'; // Corrected path to contexts
 import AllUsersTab from './AllUsersTab';
 import AllAdminsTab from './AllAdminsTab';
-import PendingUsersTab from './PendingUsersTab'; // NEW: Import the new PendingUsersTab
+import PendingUsersTab from './PendingUsersTab';
 
 const AdminUsers = () => {
-    // MODIFIED: Initial activeTab can be 'pendingUsers' or 'allUsers' or 'allAdmins'
     const [activeTab, setActiveTab] = useState('pendingUsers'); // Default to pending users for immediate action
     const { userRole, loading } = useAuth();
+    const navigate = useNavigate(); // Initialize useNavigate hook
 
     if (loading) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -27,6 +28,10 @@ const AdminUsers = () => {
             </div>
         );
     }
+
+    const handleTrashReportsClick = () => {
+        navigate('/trash-reports');
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 p-4">
@@ -67,12 +72,28 @@ const AdminUsers = () => {
                     >
                         All Admins
                     </button>
+
+                    {/* NEW: Trash Reports Button (Admin/Superadmin only) */}
+                    {(userRole === 'admin' || userRole === 'superadmin') && (
+                        <button
+                            className={`flex-1 sm:flex-none py-3 px-4 sm:px-6 text-base sm:text-lg font-semibold transition-all duration-200 rounded-t-lg ${
+                                location.pathname === '/trash-reports' // Highlight if on trash reports page
+                                    ? 'border-b-4 border-red-500 text-red-700 bg-red-50'
+                                    : 'text-gray-500 hover:text-red-500 hover:bg-gray-50'
+                            }`}
+                            onClick={handleTrashReportsClick}
+                        >
+                            Trash Reports
+                        </button>
+                    )}
                 </div>
 
                 {/* Conditional Rendering of Tabs */}
                 {activeTab === 'pendingUsers' && <PendingUsersTab />}
                 {activeTab === 'allUsers' && <AllUsersTab />}
                 {activeTab === 'allAdmins' && <AllAdminsTab />}
+                {/* Note: TrashReportsPage is a full page, not a tab within AdminUsers.
+                     Navigation handles going to it. */}
             </div>
         </div>
     );

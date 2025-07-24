@@ -1,37 +1,73 @@
 // src/pages/admin/AllAdminsTab.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useAuth } from '../../Context/AuthContext';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../Context/AuthContext'; // Corrected path to contexts
 import { SERVER_URL } from '../../utils/api';
-import ConfirmationModal from '../../components/utils/common/ConfirmationModal'; // Import the modal
+import ConfirmationModal from '../../components/utils/common/ConfirmationModal';
 
 const AllAdminsTab = () => {
     const [admins, setAdmins] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { userRole, getIdToken, currentUser } = useAuth();
+    const [actionMessage, setActionMessage] = useState(null);
 
-    // State for the confirmation modal
-    const [showModal, setShowModal] = useState(false);
-    const [modalConfig, setModalConfig] = useState(null); // Stores details for the current modal action
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(24);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Get authentication states from AuthContext
+    const { idToken, userRole, loading: authLoading, currentUser } = useAuth();
+
+    const backendUrl = SERVER_URL || "https://admin-management-server.vercel.app";
 
     // Function to fetch all admins from the backend
     const fetchAdmins = async () => {
+        if (authLoading) {
+            setLoading(false);
+            return;
+        }
+        if (userRole !== 'admin' && userRole !== 'superadmin') {
+            setError("Access Denied: You do not have permission to view this user list.");
+            setLoading(false);
+            return;
+        }
+        if (!idToken) {
+            setError("Authentication token missing. Please log in as an admin.");
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
+        setActionMessage(null);
+
         try {
-            const idToken = await getIdToken();
-            if (!idToken) {
-                setError("Authentication token missing. Please log in.");
-                setLoading(false);
+            const queryParams = new URLSearchParams(location.search);
+            const pageFromUrl = parseInt(queryParams.get('page')) || 1;
+
+            if (pageFromUrl !== currentPage) {
+                setCurrentPage(pageFromUrl);
                 return;
             }
 
-            const response = await axios.get(`${SERVER_URL}/api/users`, {
+            // MODIFIED: Fetch users with role 'admin' or 'superadmin' directly from the backend
+            // The backend's fetchPaginatedData now handles 'role' query parameter (supports comma-separated values).
+            const url = `${backendUrl}/api/users?role=admin,superadmin&page=${pageFromUrl}&limit=${itemsPerPage}`;
+            
+            const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${idToken}` }
             });
-            // Filter to show only 'admin' and 'superadmin' roles
-            setAdmins(response.data.data.filter(u => u.role === 'admin' || u.role === 'superadmin'));
+
+            setAdmins(response.data.data); // No client-side filter needed anymore
+            setTotalItems(response.data.totalItems); // These totals are now for the filtered data
+            setTotalPages(response.data.totalPages);
+
         } catch (err) {
             console.error("Error fetching admins:", err.response?.data?.message || err.message);
             setError(err.response?.data?.message || "Failed to load administrators.");
@@ -40,7 +76,15 @@ const AllAdminsTab = () => {
         }
     };
 
-    // Generic handler to open the confirmation modal for role changes or deletion
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            navigate(`${location.pathname}?page=${newPage}&limit=${itemsPerPage}`);
+        }
+    };
+
+    const [showModal, setShowModal] = useState(false);
+    const [modalConfig, setModalConfig] = useState(null);
+
     const openConfirmationModal = (action, adminUser, newRole = null) => {
         let config = {};
         switch (action) {
@@ -49,13 +93,13 @@ const AllAdminsTab = () => {
                     title: 'Demote Administrator?',
                     message: `Are you sure you want to demote ${adminUser.email} to a regular user role? They will lose admin panel access.`,
                     confirmButtonText: 'Yes, Demote',
-                    confirmButtonClass: 'bg-orange-600 hover:bg-orange-700 text-white', // Orange for demotion
+                    confirmButtonClass: 'bg-orange-600 hover:bg-orange-700 text-white',
                     onConfirm: () => handleActionConfirm(adminUser.uid, 'demote', newRole),
                     onCancel: () => setShowModal(false),
-                    icon: <svg className="mx-auto h-16 w-16 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg> // Down arrow icon
+                    icon: <svg className="mx-auto h-16 w-16 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                 };
                 break;
-            case 'changeRole': // For changing to 'admin' or 'superadmin'
+            case 'changeRole':
                 config = {
                     title: `Change Role to ${newRole.charAt(0).toUpperCase() + newRole.slice(1)}?`,
                     message: `Are you sure you want to change ${adminUser.email}'s role to '${newRole}'?`,
@@ -84,64 +128,64 @@ const AllAdminsTab = () => {
         setShowModal(true);
     };
 
-    // Handler for confirmed actions from the modal
     const handleActionConfirm = async (uid, actionType, newRole = null) => {
-        setShowModal(false); // Close modal immediately
-        try {
-            const idToken = await getIdToken();
-            if (!idToken) throw new Error("Authentication token missing.");
+        setShowModal(false);
+        setLoading(true);
+        setActionMessage(null);
 
-            // Prevent an admin from deleting or demoting themselves
+        try {
             if ((actionType === 'delete' || actionType === 'demote' || (actionType === 'changeRole' && newRole === 'user')) && uid === currentUser.uid) {
-                alert("You cannot perform this action on your own account.");
+                setActionMessage({ type: 'error', message: "You cannot perform this action on your own account." });
+                setLoading(false);
                 return;
             }
 
-            // Get the target admin's profile to check their role before deletion/demotion
             const targetAdmin = admins.find(a => a.uid === uid);
             if (targetAdmin) {
-                // Prevent 'admin' from deleting other 'admin' or 'superadmin' roles
                 if (userRole === 'admin' && (targetAdmin.role === 'admin' || targetAdmin.role === 'superadmin') && actionType === 'delete') {
-                    alert("You cannot delete other administrators if you are not a superadmin.");
+                    setActionMessage({ type: 'error', message: "You cannot delete other administrators if you are not a superadmin." });
+                    setLoading(false);
                     return;
                 }
-                // Prevent 'admin' from changing other 'admin' or 'superadmin' roles
                 if (userRole === 'admin' && (targetAdmin.role === 'admin' || targetAdmin.role === 'superadmin') && actionType === 'changeRole') {
-                    alert("You cannot change the role of other administrators if you are not a superadmin.");
+                    setActionMessage({ type: 'error', message: "You cannot change the role of other administrators if you are not a superadmin." });
+                    setLoading(false);
                     return;
                 }
             }
-
 
             if (actionType === 'delete') {
-                await axios.delete(`${SERVER_URL}/api/users/${uid}`, {
+                await axios.delete(`${backendUrl}/api/users/${uid}`, {
                     headers: { Authorization: `Bearer ${idToken}` }
                 });
-                alert(`Administrator ${admins.find(a => a.uid === uid)?.email} permanently deleted successfully.`);
+                setActionMessage({ type: 'success', message: `Administrator ${admins.find(a => a.uid === uid)?.email} permanently deleted successfully.` });
             } else if (actionType === 'demote' || actionType === 'changeRole') {
-                await axios.patch(`${SERVER_URL}/api/users/${uid}/role`, { role: newRole || 'user' }, { // Default to 'user' for demote
+                await axios.patch(`${backendUrl}/api/users/${uid}/role`, { role: newRole || 'user' }, {
                     headers: { Authorization: `Bearer ${idToken}` }
                 });
-                alert(`Administrator role updated to '${newRole || 'user'}' successfully.`);
+                setActionMessage({ type: 'success', message: `Administrator role updated to '${newRole || 'user'}' successfully.` });
             }
-            fetchAdmins(); // Refresh the list after successful update
+            fetchAdmins();
         } catch (err) {
             console.error(`Error performing action (${actionType}) for admin ${uid}:`, err.response?.data?.message || err.message);
-            alert(`Failed to perform action: ${err.response?.data?.message || err.message}`);
+            setActionMessage({ type: 'error', message: `Failed to perform action: ${err.response?.data?.message || err.message}` });
+        } finally {
+            setLoading(false);
         }
     };
 
-
     useEffect(() => {
-        if (userRole === 'admin' || userRole === 'superadmin') {
+        if (!authLoading && (userRole === 'admin' || userRole === 'superadmin')) {
             fetchAdmins();
-        } else if (userRole !== null) {
+        } else if (!authLoading && userRole !== null) {
             setError("You do not have permission to view this page.");
             setLoading(false);
         }
-    }, [userRole]);
+    }, [userRole, idToken, authLoading, currentPage, itemsPerPage, location.search]);
 
-    if (loading) return <div className="text-center py-10 text-gray-700">Loading administrators...</div>;
+    const overallLoading = loading || authLoading;
+
+    if (overallLoading) return <div className="text-center py-10 text-gray-700">Loading administrators...</div>;
     if (error) return <div className="text-center py-10 text-red-600">{error}</div>;
 
     if (userRole !== 'admin' && userRole !== 'superadmin') {
@@ -151,15 +195,24 @@ const AllAdminsTab = () => {
     return (
         <div className="container mx-auto p-4">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg shadow-inner border border-blue-100">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-4 sm:mb-0">All Administrators</h2>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-4 sm:mb-0">All Administrators ({totalItems} total)</h2>
                 <button
                     onClick={fetchAdmins}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center text-base"
+                    disabled={overallLoading}
                 >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5m0 0h5m-5 0l-1 1m1 1v5m0 0h5m-5 0l1 1m-1-1h-5m5-5v-5m0 0h-5m5 0l1-1m-1-1v-5m0 0h-5m5 0l-1 1m1 1h5m-5-5v-5m0 0h-5m5 0l1-1m-1-1v-5m0 0h-5m5 0l-1 1"></path></svg>
                     Refresh List
                 </button>
             </div>
+
+            {actionMessage && (
+                <div className={`bg-${actionMessage.type === 'success' ? 'green' : 'red'}-100 border border-${actionMessage.type === 'success' ? 'green' : 'red'}-400 text-${actionMessage.type === 'success' ? 'green' : 'red'}-700 px-4 py-3 rounded relative mb-4`} role="alert">
+                    <strong className="font-bold">{actionMessage.type === 'success' ? 'Success!' : 'Error!'}</strong>
+                    <span className="block sm:inline"> {actionMessage.message}</span>
+                </div>
+            )}
+
             {admins.length === 0 ? (
                 <p className="text-gray-600 text-center py-8 text-lg bg-white rounded-lg shadow-md">No administrators found.</p>
             ) : (
@@ -199,37 +252,34 @@ const AllAdminsTab = () => {
                                     </td>
                                     <td className="px-5 py-4 text-sm whitespace-nowrap">
                                         <div className="flex flex-wrap gap-2">
-                                            {/* Role Change Dropdown (Only if current user is superadmin AND NOT editing self) */}
-                                            {(userRole === 'superadmin' && adminUser.uid !== currentUser.uid) && (
+                                            {(userRole === 'superadmin' && adminUser.uid !== currentUser?.uid) && (
                                                 <select
                                                     value={adminUser.role}
                                                     onChange={(e) => {
-                                                        // If demoting to 'user', open demote confirmation modal
                                                         if (e.target.value === 'user') {
                                                             openConfirmationModal('demote', adminUser, 'user');
                                                         } else {
-                                                            // Otherwise, open general role change modal
                                                             openConfirmationModal('changeRole', adminUser, e.target.value);
                                                         }
                                                     }}
                                                     className="border border-gray-300 rounded-md py-1.5 px-2 text-xs shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                                                    disabled={overallLoading}
                                                 >
                                                     <option value="user">User</option>
                                                     <option value="admin">Admin</option>
                                                     <option value="superadmin">Superadmin</option>
                                                 </select>
                                             )}
-                                            {/* Delete Admin Button (only if current user is superadmin AND NOT editing self) */}
-                                            {(userRole === 'superadmin' && adminUser.uid !== currentUser.uid) && (
+                                            {(userRole === 'superadmin' && adminUser.uid !== currentUser?.uid) && (
                                                 <button
                                                     onClick={() => openConfirmationModal('delete', adminUser)}
-                                                    className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-sm transition duration-150 ease-in-out transform hover:scale-105"
+                                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-sm transition duration-150 ease-in-out transform hover:scale-105"
+                                                    disabled={overallLoading}
                                                 >
                                                     Delete
                                                 </button>
                                             )}
-                                            {/* If current user is 'admin' and not 'superadmin', they can't manage other admins */}
-                                            {(userRole === 'admin' && adminUser.uid !== currentUser.uid) && (
+                                            {(userRole === 'admin' && adminUser.uid !== currentUser?.uid) && (
                                                 <span className="text-gray-500 text-xs px-2 py-1">Cannot manage other admins</span>
                                             )}
                                         </div>
@@ -241,7 +291,28 @@ const AllAdminsTab = () => {
                 </div>
             )}
 
-            {/* Render the Confirmation Modal if showModal is true */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-2 mt-8">
+                    <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1 || overallLoading}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+                    >
+                        Previous
+                    </button>
+                    <span className="text-lg font-semibold text-gray-700">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages || overallLoading}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+
             {showModal && modalConfig && (
                 <ConfirmationModal {...modalConfig} />
             )}

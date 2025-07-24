@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../Context/AuthContext'; // Import useAuth
+import { useAuth } from '../../../Context/AuthContext'; // Corrected path to contexts
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState(""); // State for search input
@@ -48,30 +48,31 @@ const Navbar = () => {
     <nav className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-lg sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {/* Logo/Brand - Now also serves as the Home link */}
-        <Link to="/" className="text-2xl md:text-3xl font-bold flex items-center space-x-2">
+        <Link to="/" className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center space-x-2">
           <span>Admin Management</span>
         </Link>
 
         {/* Desktop Navigation Links and Search */}
-        <div className="hidden md:flex items-center space-x-6">
-          {/* Removed: <Link to="/" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">Home</Link> */}
-          <Link to="/all-data" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">All Reports</Link>
-          <Link to="/suspended-users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">Suspended</Link>
-          <Link to="/banned-users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium">Banned</Link>
+        {/* Changed space-x-6 to gap-x-4 and added flex-wrap for better responsiveness */}
+        <div className="hidden md:flex items-center flex-wrap gap-x-4">
+          <Link to="/all-data" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium py-2 px-3">All Reports</Link>
+          <Link to="/suspended-users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium py-2 px-3">Suspended</Link>
+          <Link to="/banned-users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium py-2 px-3">Banned</Link>
 
           {/* Admin Panel Link (Desktop) */}
           {!authLoading && isAdmin && (
-            <Link to="/admin/users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium bg-blue-600 px-3 py-1 rounded-md shadow-sm">
+            <Link to="/admin/users" className="hover:text-blue-200 transition-colors duration-200 text-lg font-medium bg-blue-600 px-3 py-2 rounded-md shadow-sm">
               Admin Panel
             </Link>
           )}
 
           {/* Search Form for Desktop */}
-          <form onSubmit={handleSearch} className="flex items-center space-x-2">
+          <form onSubmit={handleSearch} className="flex items-center gap-x-2"> {/* Changed space-x-2 to gap-x-2 */}
             <input
               type="text"
               placeholder="Search..."
-              className="px-3 py-2 rounded-lg border border-blue-400 bg-blue-800 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200 w-32 md:w-auto"
+              // Adjusted width for better responsiveness across desktop sizes
+              className="px-3 py-2 rounded-lg border border-blue-400 bg-blue-800 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200 w-full max-w-[150px] lg:max-w-[200px]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -116,9 +117,8 @@ const Navbar = () => {
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="md:hidden bg-blue-800 pb-4">
+        <div className="md:hidden bg-blue-800 pb-4 px-4"> {/* Added px-4 for consistent padding */}
           <div className="flex flex-col items-center space-y-4">
-            {/* Removed: <Link to="/" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>Home</Link> */}
             <Link to="/all-data" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>All Reports</Link>
             <Link to="/suspended-users" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>Suspended</Link>
             <Link to="/banned-users" className="block py-2 px-4 text-lg hover:bg-blue-700 w-full text-center transition-colors duration-200" onClick={toggleMobileMenu}>Banned</Link>
@@ -131,7 +131,7 @@ const Navbar = () => {
             )}
 
             {/* Search Form for Mobile */}
-            <form onSubmit={handleSearch} className="flex items-center space-x-2 w-full px-4">
+            <form onSubmit={handleSearch} className="flex items-center gap-x-2 w-full"> {/* Changed space-x-2 to gap-x-2 and added w-full */}
               <input
                 type="text"
                 placeholder="Search..."

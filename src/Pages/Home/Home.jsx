@@ -16,7 +16,7 @@ const Home = () => {
   // Ensure the environment variable in Vercel for the frontend project DOES NOT have a trailing slash.
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://admin-management-server.vercel.app"; 
   // If your local backend runs on port 5000 and you want to test locally with it, change the fallback:
-  // const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+  // const backendUrl = process.env.REACT_APP_BACKEND_URL || "https://admin-management-server.vercel.app";
 
 
   const handleSubmit = async (e) => {

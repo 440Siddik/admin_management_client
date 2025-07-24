@@ -1,16 +1,19 @@
 import { createBrowserRouter } from "react-router-dom";
-import Main from "../Layout/Main";
+import Main from "../Layout/Main"; // Ensure this path is correct
 import Home from "../Pages/Home/Home";
 import BannedUser from "../Pages/BannedUser/BannedUser";
-import SuspendUser from "../Pages/SuspendUser/SuspendUser";
-import AllData from "../Pages/AllData/AllData";
+import SuspendUser from "../Pages/SuspendUser/SuspendUser"; // Assuming this is correct
+import AllData from "../Pages/AllData/AllData"; // Assuming this is correct
 import Login from "../Pages/Login/Login";
 import Register from "../Pages/Register/Register";
-import ForgotPassword from ".././ForgotPass/ForgotPass"; // NEW: Import ForgotPassword
-import PrivateRoute from "../components/utils/PrivateRoute/privateRoute"; // Corrected PrivateRoute import path
+import ForgotPassword from "../ForgotPass/ForgotPass"; // Assuming this path is correct
+import PrivateRoute from "../components/utils/PrivateRoute/privateRoute"; // Ensure this path is correct
 
-// NEW: Import the main AdminUsers component
-import AdminUsers from "../Pages/Admin/AdminUsers"; // Path to your main AdminUsers component
+// Import the main AdminUsers component
+import AdminUsers from "../Pages/Admin/AdminUsers";
+
+// NEW: Import the TrashReportsPage component (adjusted path based on your previous input)
+import TrashReportsPage from "../Pages/Admin/TrashReports"; // Assuming this path is correct
 
 const router = createBrowserRouter([
   {
@@ -46,15 +49,24 @@ const router = createBrowserRouter([
         element: <Register />, // Register page is NOT protected
       },
       {
-        path: "/forgot-password", // NEW: Add this route
+        path: "/forgot-password", // Add this route
         element: <ForgotPassword />, // ForgotPassword page is NOT protected
       },
-      // NEW ROUTE: Admin Panel
+      // NEW ROUTE: Admin Panel for Users
       {
         path: "/admin/users", // The URL for your admin panel
         element: (
           <PrivateRoute requiredRole="admin"> {/* This route requires 'admin' or 'superadmin' role */}
             <AdminUsers />
+          </PrivateRoute>
+        ),
+      },
+      // NEW ROUTE: Trash Reports Section (Admin Only)
+      {
+        path: "/trash-reports",
+        element: (
+          <PrivateRoute requiredRole="admin"> {/* This route requires 'admin' or 'superadmin' role */}
+            <TrashReportsPage />
           </PrivateRoute>
         ),
       },
