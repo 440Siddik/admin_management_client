@@ -24,7 +24,7 @@ const AllUsersTab = () => {
     // Get authentication states from AuthContext
     const { idToken, userRole, loading: authLoading, currentUser } = useAuth();
 
-    const backendUrl = SERVER_URL || "https://admin-management-server.vercel.app";
+    const backendUrl = SERVER_URL; // Use SERVER_URL directly
 
     // Function to fetch only APPROVED, REGULAR users from the backend
     const fetchUsers = async () => {
@@ -56,16 +56,15 @@ const AllUsersTab = () => {
                 return;
             }
 
-            // MODIFIED: Fetch users with status 'approved' and role 'user' directly from the backend
-            // The backend's fetchPaginatedData now handles 'status' and 'role' query parameters.
+            // Fetch users with status 'approved' and role 'user' directly from the backend
             const url = `${backendUrl}/api/users?status=approved&role=user&page=${pageFromUrl}&limit=${itemsPerPage}`;
             
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${idToken}` }
             });
 
-            setUsers(response.data.data); // No client-side filter needed anymore
-            setTotalItems(response.data.totalItems); // These totals are now for the filtered data
+            setUsers(response.data.data);
+            setTotalItems(response.data.totalItems);
             setTotalPages(response.data.totalPages);
 
         } catch (err) {
@@ -123,7 +122,7 @@ const AllUsersTab = () => {
         setActionMessage(null);
 
         try {
-            if (actionType === 'delete' && uid === currentUser.uid) {
+            if (actionType === 'delete' && currentUser && uid === currentUser.uid) {
                 setActionMessage({ type: 'error', message: "You cannot delete your own account from here." });
                 setLoading(false);
                 return;
@@ -237,7 +236,7 @@ const AllUsersTab = () => {
                                                 </button>
                                             )}
                                             
-                                            {((userRole === 'admin' || userRole === 'superadmin') && user.uid !== currentUser?.uid) && (
+                                            {((userRole === 'admin' || userRole === 'superadmin') && currentUser && user.uid !== currentUser.uid) && (
                                                 <button
                                                     onClick={() => openConfirmationModal('delete', user)}
                                                     className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-sm transition duration-150 ease-in-out transform hover:scale-105"

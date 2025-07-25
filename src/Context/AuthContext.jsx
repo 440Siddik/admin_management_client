@@ -27,9 +27,12 @@ export const AuthProvider = ({ children }) => {
       const response = await fetch(`${SERVER_URL}/api/users/${uid}`);
       const data = await response.json();
       if (!response.ok) {
-        if (response.status === 404) {
-          return null;
+        // If the server returns a 403 with a specific message, handle it
+        if (response.status === 403 && data.message.includes('pending admin approval')) {
+          // This is a valid state for a pending user, don't throw an error, just return the data
+          return data;
         }
+        // For other 4xx or 5xx errors, throw an error
         throw new Error(data.message || `Failed to fetch user profile from backend. Status: ${response.status}`);
       }
       return data; // Returns the user profile from MongoDB (including status and role)
@@ -78,23 +81,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Function to get Firebase ID token
-  // Now explicitly takes 'user' object as an argument
   const getIdToken = async (user, forceRefresh = false) => {
     if (user) {
       try {
         const token = await user.getIdToken(forceRefresh);
-        setIdToken(token); // Update the idToken state
-        localStorage.setItem('adminToken', token); // Persist token (optional, but good for quick reloads)
+        // console.log("AuthContext: Token fetched:", token ? token.substring(0, 20) + '...' : 'null'); // Debug token fetch
         return token;
       } catch (error) {
         console.error("AuthContext: Error getting/refreshing Firebase ID token:", error);
-        setIdToken(null);
-        localStorage.removeItem('adminToken');
         return null;
       }
     }
-    setIdToken(null); // Clear token if no user is passed
-    localStorage.removeItem('adminToken');
     return null;
   };
 
@@ -104,36 +101,49 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(user); // Set the Firebase User object
 
       if (user) {
-        try {
-          // First, try to get the ID token. It's needed for backend calls.
-          // Pass the 'user' object from onAuthStateChanged directly
-          const token = await getIdToken(user, true); // Force refresh to get latest claims
+        let token = null;
+        let profile = null;
+        let role = null;
 
-          if (!token) {
-            setUserProfile(null);
-            setUserRole(null);
-            setLoading(false); // Finish loading even if token is missing
-            return; // Exit early if no token
+        try {
+          // 1. Get ID Token first
+          token = await getIdToken(user, true); // Force refresh to get latest claims
+          setIdToken(token); // Update idToken state immediately
+          if (token) {
+            localStorage.setItem('adminToken', token); // Persist token
+          } else {
+            localStorage.removeItem('adminToken');
           }
 
-          const profile = await fetchUserProfile(user.uid);
-          setUserProfile(profile); // Set the user's custom profile
-          setUserRole(profile ? profile.role : null); // Set the user's role
+          // 2. If token is available, fetch user profile
+          if (token) {
+            profile = await fetchUserProfile(user.uid);
+            setUserProfile(profile); // Set the user's custom profile
+            role = profile ? profile.role : null;
+            setUserRole(role); // Set the user's role
+          } else {
+            // If no token, ensure profile and role are null
+            setUserProfile(null);
+            setUserRole(null);
+          }
 
         } catch (profileError) {
-          console.error("AuthContext: Error fetching user profile from MongoDB or processing token:", profileError);
+          console.error("AuthContext: Error fetching user profile or processing token:", profileError);
+          // If any error during profile fetch, clear related states
           setUserProfile(null);
           setUserRole(null);
-          setIdToken(null); // Clear token if profile fetch fails
+          setIdToken(null);
           localStorage.removeItem('adminToken');
         } finally {
-          setLoading(false); // Ensure loading is set to false ONLY after the profile fetch attempt completes
+          // Set loading to false ONLY after all asynchronous operations are attempted
+          // This ensures children components don't render until all auth data is processed.
+          setLoading(false);
         }
       } else {
-        // If no user, clear states and set loading to false immediately
+        // If no user, clear all states and set loading to false immediately
         setUserProfile(null);
         setUserRole(null);
-        setIdToken(null); // Clear token
+        setIdToken(null);
         localStorage.removeItem('adminToken');
         setLoading(false);
       }

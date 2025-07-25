@@ -24,7 +24,7 @@ const AllAdminsTab = () => {
     // Get authentication states from AuthContext
     const { idToken, userRole, loading: authLoading, currentUser } = useAuth();
 
-    const backendUrl = SERVER_URL || "https://admin-management-server.vercel.app";
+    const backendUrl = SERVER_URL; // Use SERVER_URL directly
 
     // Function to fetch all admins from the backend
     const fetchAdmins = async () => {
@@ -56,16 +56,15 @@ const AllAdminsTab = () => {
                 return;
             }
 
-            // MODIFIED: Fetch users with role 'admin' or 'superadmin' directly from the backend
-            // The backend's fetchPaginatedData now handles 'role' query parameter (supports comma-separated values).
+            // Fetch users with role 'admin' or 'superadmin' directly from the backend
             const url = `${backendUrl}/api/users?role=admin,superadmin&page=${pageFromUrl}&limit=${itemsPerPage}`;
             
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${idToken}` }
             });
 
-            setAdmins(response.data.data); // No client-side filter needed anymore
-            setTotalItems(response.data.totalItems); // These totals are now for the filtered data
+            setAdmins(response.data.data);
+            setTotalItems(response.data.totalItems);
             setTotalPages(response.data.totalPages);
 
         } catch (err) {
@@ -134,7 +133,7 @@ const AllAdminsTab = () => {
         setActionMessage(null);
 
         try {
-            if ((actionType === 'delete' || actionType === 'demote' || (actionType === 'changeRole' && newRole === 'user')) && uid === currentUser.uid) {
+            if ((actionType === 'delete' || actionType === 'demote' || (actionType === 'changeRole' && newRole === 'user')) && currentUser && uid === currentUser.uid) {
                 setActionMessage({ type: 'error', message: "You cannot perform this action on your own account." });
                 setLoading(false);
                 return;

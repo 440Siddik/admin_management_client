@@ -1,7 +1,7 @@
 // src/pages/admin/PendingUsersTab.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useLocation, useNavigate } from 'react-router-dom'; // Import for pagination
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../Context/AuthContext'; // Corrected path to contexts
 import { SERVER_URL } from '../../utils/api';
 import ConfirmationModal from '../../components/utils/common/ConfirmationModal'; // Import the modal
@@ -24,7 +24,7 @@ const PendingUsersTab = () => {
     // Get authentication states from AuthContext
     const { idToken, userRole, loading: authLoading, currentUser } = useAuth();
 
-    const backendUrl = SERVER_URL || "https://admin-management-server.vercel.app";
+    const backendUrl = SERVER_URL; // Use SERVER_URL directly
 
     // Function to fetch only pending users from the backend
     const fetchPendingUsers = async () => {
@@ -115,7 +115,6 @@ const PendingUsersTab = () => {
                     icon: <svg className="mx-auto h-16 w-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2A9 9 0 111 12a9 9 0 0118 0z"></path></svg>
                 };
                 break;
-            // The 'promote' case is not relevant here as pending users should not be promoted directly
             default:
                 return;
         }
@@ -131,7 +130,7 @@ const PendingUsersTab = () => {
 
         try {
             // Prevent an admin from deleting themselves (safety measure)
-            if ((actionType === 'reject') && uid === currentUser.uid) {
+            if ((actionType === 'reject') && currentUser && uid === currentUser.uid) {
                 setActionMessage({ type: 'error', message: "You cannot delete your own account from here." });
                 setLoading(false);
                 return;
@@ -143,7 +142,7 @@ const PendingUsersTab = () => {
                     headers: { Authorization: `Bearer ${idToken}` }
                 });
                 setActionMessage({ type: 'success', message: `User ${pendingUsers.find(u => u.uid === uid)?.email} rejected and deleted successfully.` });
-            } else if (actionType === 'approved') { // Changed 'promote' to 'approved' for clarity
+            } else if (actionType === 'approved') {
                 // For 'approved', call the PATCH /status endpoint
                 await axios.patch(`${backendUrl}/api/users/${uid}/status`, { status: actionType }, {
                     headers: { Authorization: `Bearer ${idToken}` }
@@ -240,24 +239,20 @@ const PendingUsersTab = () => {
                                     </td>
                                     <td className="px-5 py-4 text-sm whitespace-nowrap">
                                         <div className="flex flex-wrap gap-2">
-                                            {/* Approve and Reject are the primary actions for pending users */}
                                             <button
                                                 onClick={() => openConfirmationModal('approve', user)}
                                                 className="bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-sm transition duration-150 ease-in-out transform hover:scale-105"
-                                                disabled={overallLoading} // Disable during loading
+                                                disabled={overallLoading}
                                             >
                                                 Approve
                                             </button>
                                             <button
                                                 onClick={() => openConfirmationModal('reject', user)}
                                                 className="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-sm transition duration-150 ease-in-out transform hover:scale-105"
-                                                disabled={overallLoading} // Disable during loading
+                                                disabled={overallLoading}
                                             >
                                                 Reject
                                             </button>
-                                            
-                                            {/* "Make Admin" button is intentionally hidden here as pending users should first be approved */}
-                                            {/* and then promoted from the AllUsersTab if needed. */}
                                         </div>
                                     </td>
                                 </tr>
